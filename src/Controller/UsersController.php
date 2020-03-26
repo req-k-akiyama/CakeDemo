@@ -13,6 +13,51 @@ namespace App\Controller;
 class UsersController extends AppController
 {
     /**
+     * API実行前の処理を実行する
+     *
+     * @param \Cake\Event\EventInterface $event
+     */
+    public function beforeFilter(\Cake\Event\EventInterface $event): void
+    {
+        parent::beforeFilter($event);
+        $this->Authentication->addUnauthenticatedActions(['login', 'add']);
+    }
+
+    /**
+     * GET/POST /users/login
+     */
+    public function login(): ?\Cake\Http\Response
+    {
+        $this->request->allowMethod(['get', 'post']);
+        $result = $this->Authentication->getResult();
+        if ($result->isValid()) {
+            $redirect = $this->request->getQuery('redirect', [
+                'controller' => 'Articles',
+                'action' => 'index',
+            ]);
+            return $this->redirect($redirect);
+        }
+
+        if ($this->request->is('post') && !$result->isValid()) {
+            $this->Flash->error(__('Invalid username or password'));
+        }
+        return null;
+    }
+
+
+    /**
+     * GET/POST /users/logout
+     */
+    public function logout(): ?\Cake\Http\Response
+    {
+        $result = $this->Authentication->getResult();
+        if ($result->isValid()) {
+            $this->Authentication->logout();
+            return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+        }
+    }
+
+    /**
      * Index method
      *
      * @return \Cake\Http\Response|null|void Renders view
