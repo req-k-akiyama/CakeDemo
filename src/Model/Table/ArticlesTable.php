@@ -22,7 +22,10 @@ class ArticlesTable extends Table
     public function initialize(array $config): void
     {
         $this->addBehavior('Timestamp');
-        $this->belongsToMany('Tags');
+        $this->belongsToMany('Tags', [
+            'joinTable' => 'articles_tags',
+            'dependent' => true
+        ]);
     }
 
     /**
@@ -34,6 +37,10 @@ class ArticlesTable extends Table
      */
     public function beforeSave($event, $entity, $options): void
     {
+        if ($entity->tag_string) {
+            $entity->tags = $this->_buildTags($entity->tag_string);
+        }
+
         if ($entity->isNew() && !$entity->slug) {
             // 記事タイトルからslugを生成する
             $sluggedTitle = Text::slug($entity->title);
@@ -88,5 +95,37 @@ class ArticlesTable extends Table
         }
 
         return $query->group(['Articles.id']);
+    }
+
+    /**
+     * 文字列形式のタグを受け取り、新規のタグである場合作成し、配列化したTagエンティティを返す
+     *
+     * @param string $tagString カンマ区切り文字列形式のタグ
+     * @return array Tagエンティティ
+     */
+    protected function _buildTags(string $tagString): array
+    {
+        $newTags = array_map('trim', explode(',', $tagString));
+        $newTags = array_filter($newTags);
+        $newTags = array_unique($newTags);
+
+        $out = [];
+        $query = $this->Tags->find()
+            ->where(['Tags.title IN' => $newTags]);
+
+        foreach ($query->extract('title') as $existing) {
+            $index = array_search($existing, $newTags);
+            if ($index !== false) {
+                unset($newTags[$index]);
+            }
+        }
+
+        foreach ($query as $tag) {
+            $out[] = $tag;
+        }
+        foreach ($newTags as $tag) {
+            $out[] = $this->Tags->newEntity(['title' => $tag]);
+        }
+        return $out;
     }
 }
