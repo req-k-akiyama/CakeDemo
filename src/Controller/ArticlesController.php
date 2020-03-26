@@ -23,6 +23,7 @@ class ArticlesController extends AppController
      */
     public function index(): void
     {
+        $this->Authorization->skipAuthorization();
         $this->loadComponent('Paginator');
         $articles = $this->Paginator->paginate($this->Articles->find());
         $this->set(compact('articles'));
@@ -35,6 +36,7 @@ class ArticlesController extends AppController
      */
     public function view(string $slug = null): void
     {
+        $this->Authorization->skipAuthorization();
         $article = $this->Articles
             ->findBySlug($slug)
             ->contain('Tags')
@@ -50,6 +52,7 @@ class ArticlesController extends AppController
      */
     public function tags(string ...$tags): void
     {
+        $this->Authorization->skipAuthorization();
         $articles = $this->Articles->find('tagged', [
             'tags' => $tags
         ]);
@@ -66,12 +69,12 @@ class ArticlesController extends AppController
     public function add(): ?\Cake\Http\Response
     {
         $article = $this->Articles->newEmptyEntity();
+        $this->Authorization->authorize($article);
+
         if ($this->request->is('post')) {
             $article = $this->Articles->patchEntity($article, $this->request->getData());
 
-            // TODO: Hardcoding the user_id is temporary, and will be removed later
-            // when we build authentication out.
-            $article->user_id = 1;
+            $article->user_id = $this->request->getAttribute('identity')->getIdentifier();
 
             if ($this->Articles->save($article)) {
                 $this->Flash->success(__('Your article has been saved.'));
@@ -97,9 +100,12 @@ class ArticlesController extends AppController
             ->findBySlug($slug)
             ->contain('Tags')
             ->firstOrFail();
+        $this->Authorization->authorize($article);
 
         if ($this->request->is(['post', 'put'])) {
-            $this->Articles->patchEntity($article, $this->request->getData());
+            $this->Articles->patchEntity($article, $this->request->getData(), [
+                'accessibleFields' => ['user_id' => false],
+            ]);
             if ($this->Articles->save($article)) {
                 $this->Flash->success(__('Your article has been updated.'));
                 return $this->redirect(['action' => 'index']);
@@ -123,6 +129,7 @@ class ArticlesController extends AppController
         $this->request->allowMethod(['post', 'delete']);
 
         $article = $this->Articles->findBySlug($slug)->firstOrFail();
+        $this->Authorization->authorize($article);
         if ($this->Articles->delete($article)) {
             $this->Flash->success(__('The {0} article has been deleted.', $article->title));
             return $this->redirect(['action' => 'index']);
