@@ -1,53 +1,94 @@
-# CakePHP Application Skeleton
+# I 社様向け CakePHP チュートリアル実装デモ
 
-[![Build Status](https://img.shields.io/travis/cakephp/app/master.svg?style=flat-square)](https://travis-ci.org/cakephp/app)
-[![Total Downloads](https://img.shields.io/packagist/dt/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%207-brightgreen.svg?style=flat-square)](https://github.com/phpstan/phpstan)
+## 概要
 
-A skeleton for creating applications with [CakePHP](https://cakephp.org) 4.x.
+このリポジトリは、転職活動のスキルテスト (I社様ご要請) のために、[CakePHP 4.x Quick Start Guide](https://book.cakephp.org/4/en/quickstart.html) に従ってごく簡単なCMSを実装したものです。
 
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
+## 成果物
 
-## Installation
+### Gitリポジトリ
+https://github.com/req-k-akiyama/CakeDemo
 
-1. Download [Composer](https://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project --prefer-dist cakephp/app [app_name]`.
+### 動作デモ
 
-If Composer is installed globally, run
+以下に完成し動作するCMSがあります (2020/3/26 現在)  
+http://18.180.19.40/articles
 
-```bash
-composer create-project --prefer-dist cakephp/app
-```
+最初はログイン画面が表示されるため、 `Add User` から適当なユーザを作ってご確認ください。
 
-In case you want to use a custom app dir name (e.g. `/myapp/`):
+予告なく動作停止する可能性があります。
 
-```bash
-composer create-project --prefer-dist cakephp/app myapp
-```
+## 動作環境
 
-You can now either use your machine's webserver to view the default home page, or start
-up the built-in webserver with:
+* サーバクラウド:  AWS
+* OS:  Amazon Linux2
+* インスタンスサイズ:  t2.micro
+* リージョン:  ap-northeast-1(Tokyo)
+* Elastic IP:  18.180.19.40
+   * 無料枠の範囲で動作させるためドメインは取得していません
+   * したがってSSLも適用していません
+   * LBも噛ませていません
 
-```bash
-bin/cake server -p 8765
-```
+## ミドルウェア・言語・フレームワーク
 
-Then visit `http://localhost:8765` to see the welcome page.
+* Nginx 1.12.2
+* MySQL 5.7.29
+  * RDSではなくlocal環境に同居しています
+* PHP 7.4.4
+* CakePHP 4.0.3
+  * ほか細かいモジュールは `composer.lock` に譲ります
 
-## Update
+## やったこと
 
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
+チュートリアルの内容を最後までほぼそのままなぞりました。  
+ただし以下の点は個人的に付け加えて行いました。
+* 可能な限りタイプヒンティング
+* `bake` を使わずに指示通り手で作ったphpファイルにも`declare(strict_types=1)` をつけた
+* DBの接続情報をconfigに直書きしない
+  * commitしてpublicリポジトリにあがるのがどうしても気持ち悪かった
+  * 環境変数から取るように修正
+  * ただし本当に環境変数の設定するのは面倒だったので `dotenv` で設定した
+* 各クラス・メソッド・プロパティにPHPDocを追加
+  * チームが英語で書く方針であれば英語でも書けるが、ひとまず日本語で書いた
+* バグや障害の回避（後述）
 
-## Configuration
+テキストエディタは `VS Code` を使い、`Romete-SSH` 拡張でリモートのサーバに入ってファイルを直接編集しました。
 
-Read and edit the environment specific `config/app_local.php` and setup the 
-`'Datasources'` and any other configuration relevant for your application.
-Other environment agnostic settings can be changed in `config/app.php`.
+デプロイはシェルスクリプトでごく簡単に Git からの pull やパーミッション付与を行うにとどめています。
 
-## Layout
+普段業務で作業するときと同じ感覚で commit の粒度を切ってあります。（動作が壊れない範囲でなるべく小さく）  
+ただしすべて master ブランチ進行です。
 
-The app skeleton uses [Milligram](https://milligram.io/) (v1.3) minimalist CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.
+
+## やってないこと
+
+上記以外にチュートリアルの内容になかったことは基本的にやっていません。  
+たとえば `bake` で作った `user` や `tag` の一覧ページなどは認証系の設定でアクセス不能になりましたが、放置しています。  
+`bake` で生成された `PHPDoc` などにもあまり手を入れいません。
+
+## ぶつかったバク・障害
+
+### Validatorの設定時のエラー
+
+チュートリアル中にあった [Validator の設定](https://book.cakephp.org/4/en/tutorials-and-examples/cms/articles-controller.html#update-validation-rules-for-articles)、  
+`->allowEmptyString('title', false)`  
+このメソッドにこんなシグネチャは存在しないのでエラーになりました。
+
+詳しく追ってないですが、どこかで破壊的な変更があってドキュメントが追いついていないものと思われます。
+https://github.com/cakephp/cakephp/blob/master/src/Validation/Validator.php#L858  
+ここの実装を見て `->notEmptyString()` に変更しました。
+
+### 記事内容の改行が表示されないバグ
+
+個別の記事を参照する機能 ( /article/view ) で、記事の body に改行が含まれていても反映されないバグがありました。  
+単純に `nl2br()` して直しました。
+
+### Policy設定時のエラー
+
+`Article` エンティティに対する Authorization について、`bake` で生成される Policy の `caxXXX` 系メソッドとコントローラのメソッド名が違うためエラーになりました。  
+かなり CoC を重視するスタイルの開発なのに、なぜコントローラの API は素直に CRUD にしないんだろう（あるいはなぜ `bake` でコントローラの実装を見ないんだろう）と思いました。
+
+### メモリ不足
+
+AWSの無料分で動かそうとしたためマシンが貧弱すぎて、 `composer require` しようとしたらメモリ不足で失敗しました。  
+AWSはデフォルトではswap領域が設定されていないのですが、仕方なく設定して乗り切りました。
