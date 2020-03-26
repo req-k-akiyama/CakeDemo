@@ -40,6 +40,24 @@ class ArticlesController extends AppController
     }
 
     /**
+     * GET /articles/tagged
+     *
+     * @param string[] ...$tags
+     * @return void
+     */
+    public function tags(string ...$tags): void
+    {
+        $articles = $this->Articles->find('tagged', [
+            'tags' => $tags
+        ]);
+
+        $this->set([
+            'articles' => $articles,
+            'tags' => $tags
+        ]);
+    }
+
+    /**
      * GET,POST /articles/add
      */
     public function add(): ?\Cake\Http\Response
