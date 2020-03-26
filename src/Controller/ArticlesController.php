@@ -61,4 +61,28 @@ class ArticlesController extends AppController
         $this->set('article', $article);
         return null;
     }
+
+    /**
+     * GET,POST,PUT /articles/edit
+     *
+     * @param string $slug 記事のスラッグ
+     */
+    public function edit(string $slug): ?\Cake\Http\Response
+    {
+        $article = $this->Articles
+            ->findBySlug($slug)
+            ->firstOrFail();
+
+        if ($this->request->is(['post', 'put'])) {
+            $this->Articles->patchEntity($article, $this->request->getData());
+            if ($this->Articles->save($article)) {
+                $this->Flash->success(__('Your article has been updated.'));
+                return $this->redirect(['action' => 'index']);
+            }
+            $this->Flash->error(__('Unable to update your article.'));
+        }
+
+        $this->set('article', $article);
+        return null;
+    }
 }

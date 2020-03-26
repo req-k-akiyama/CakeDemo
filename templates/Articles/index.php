@@ -4,6 +4,7 @@
     <tr>
         <th>Title</th>
         <th>Created</th>
+        <th>Action</th>
     </tr>
 
     <?php foreach ($articles as $article): ?>
@@ -13,6 +14,9 @@
         </td>
         <td>
             <?= $article->created->format(DATE_RFC850) ?>
+        </td>
+        <td>
+            <?= $this->Html->link('Edit', ['action' => 'edit', $article->slug]) ?>
         </td>
     </tr>
     <?php endforeach; ?>
